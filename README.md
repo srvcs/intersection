@@ -1,51 +1,48 @@
 # srvcs-intersection
 
-The set-intersection service of the srvcs.cloud distributed standard library.
+## Name
 
-Its single concern: **which values appear in both sets?** Given two lists of
-integers `a` and `b`, it reports the sorted list of **distinct** values that
-appear in **both** lists.
+| Field | Value |
+| --- | --- |
+| Service | `srvcs-intersection` |
+| Slug | `intersection` |
+| Repository | `srvcs/intersection` |
+| Package | `srvcs-intersection` |
+| Kind | `leaf` |
 
-`srvcs-intersection` is a **leaf**: it depends on no other service and makes no
-network calls. All work is local.
+## Function
 
-```text
-result = sorted list of distinct integers present in both a and b
-intersection([1, 2, 3], [2, 3, 4]) = [2, 3]
-```
+sets: intersection of two sets
+
+## Dependencies
+
+None.
 
 ## API
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/` | Service identity, concern, and dependency list |
-| `POST` | `/` | Report the intersection of sets `a` and `b` |
-| `GET` | `/healthz` `/readyz` `/metrics` `/openapi.json` | srvcs service standard surface |
+| `GET` | `/` | Service identity |
+| `POST` | `/` | Evaluate the service function |
+| `GET` | `/healthz` | Liveness probe |
+| `GET` | `/readyz` | Readiness probe |
+| `GET` | `/metrics` | Prometheus metrics |
+| `GET` | `/openapi.json` | OpenAPI document |
 
-```sh
-curl -s -X POST localhost:8080/ -H 'content-type: application/json' -d '{"a": [1, 2, 3], "b": [2, 3, 4]}'
-# {"a":[1,2,3],"b":[2,3,4],"result":[2,3]}
+## Inputs
 
-curl -s -X POST localhost:8080/ -H 'content-type: application/json' -d '{"a": [3, 3, 1, 2], "b": [2, 2, 3, 1]}'
-# {"a":[3,3,1,2],"b":[2,2,3,1],"result":[1,2,3]}
-```
+| Name | Type | Required |
+| --- | --- | --- |
+| `a` | `json[]` | yes |
+| `b` | `json[]` | yes |
 
-Responses:
+## Outputs
 
-- `200 {"a": [...], "b": [...], "result": [<int>, ...]}` — evaluated. `result`
-  is the sorted list of distinct integers appearing in both `a` and `b`.
-- `422 {"error": "a and b must be lists of integers"}` — some element of `a` or
-  `b` is not a JSON integer.
-
-The result is always a sorted, duplicate-free list of `i64`. Duplicates within a
-list collapse, and order in the input is irrelevant. Disjoint or empty inputs
-yield `[]`.
-
-## Dependencies
-
-None. `srvcs-intersection` is a leaf set service. Because it owns its own
-validation, it rejects any non-integer element directly with `422` rather than
-forwarding to a dependency.
+| Name | Type |
+| --- | --- |
+| `a` | `json[]` |
+| `b` | `json[]` |
+| `result` | `integer[]` |
 
 ## Configuration
 
@@ -55,7 +52,13 @@ forwarding to a dependency.
 | `SRVCS_ENV` | `development` | Environment label for logs |
 | `RUST_LOG` | `info,tower_http=info` | Tracing filter |
 
-## Local checks
+## Error Behavior
+
+- `422` means the request could not be evaluated for the documented input shape.
+- `503` means a required dependency was unavailable or returned an unexpected response.
+- Dependency validation errors are forwarded when this service delegates validation.
+
+## Local Checks
 
 ```sh
 cargo fmt --check
@@ -63,8 +66,8 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-See [`srvcs/platform`](https://github.com/srvcs/platform) for the shared
-standard.
+See the [srvcs service standard](https://github.com/srvcs/platform/blob/main/STANDARD.md) for the full operational contract.
 
-> Note: the `cargoHash` in `flake.nix` is inherited from the template and must be
-> refreshed with a `nix build` before the Nix gates pass.
+## Metadata
+
+Machine-readable service metadata lives in `srvcs.yaml`. Keep it aligned with this README when the service contract changes.
